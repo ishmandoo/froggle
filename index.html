@@ -1229,7 +1229,7 @@ function shareResult() {
     grid += colors.join('') + '\n';
   }
 
-  const text = `Froggle 🐸 Day ${dayNum} — ${numGuesses}/6\n\n${grid}\n...it was FROG again\n\nhttps://blog.benwiener.com/froggle/`;
+  const text = `Froggle 🐸 Day ${dayNum} — ${numGuesses}/6\n\n${grid}\n...it was FROG again https://blog.benwiener.com/froggle/`;
 
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard! 🐸'));

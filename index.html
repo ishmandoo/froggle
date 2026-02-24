@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Froggle 🐸</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#0a1a0a;
+  --bg2:#0f2510;
+  --surface:#132e13;
+  --surface2:#1a3a1a;
+  --border:#2a5a2a;
+  --green:#4caf50;
+  --green-bright:#66ff66;
+  --green-tile:#2e7d32;
+  --yellow-tile:#8d6e00;
+  --gray-tile:#3a3a3a;
+  --text:#e0f0e0;
+  --text-dim:#7a9a7a;
+  --text-bright:#c0ffc0;
+  --lily:#1a4a1a;
+  --mud:#3d2e1a;
+  --glow:rgba(76,175,80,.15);
+  --font-display:'Boogaloo',cursive;
+  --font-body:'DM Sans',sans-serif;
+}
+
+html,body{
+  height:100%;
+  overflow:hidden;
+}
+
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Swamp background texture */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 80%,rgba(30,80,30,.4),transparent),
+    radial-gradient(ellipse 60% 40% at 80% 20%,rgba(20,60,20,.3),transparent),
+    radial-gradient(ellipse 100% 60% at 50% 100%,rgba(40,70,20,.3),transparent);
+  pointer-events:none;
+  z-index:0;
+}
+
+/* Lily pad decorations */
+.lily-pad{
+  position:fixed;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 40% 40%,rgba(50,120,50,.15),rgba(30,80,30,.05));
+  pointer-events:none;
+  z-index:0;
+}
+.lily-pad:nth-child(1){width:200px;height:180px;bottom:-40px;left:-30px;transform:rotate(-15deg)}
+.lily-pad:nth-child(2){width:150px;height:130px;bottom:-20px;right:-20px;transform:rotate(25deg)}
+.lily-pad:nth-child(3){width:100px;height:90px;top:60px;right:-30px;transform:rotate(-5deg);opacity:.5}
+
+/* Firefly dots */
+@keyframes firefly{
+  0%,100%{opacity:0;transform:translateY(0)}
+  50%{opacity:1;transform:translateY(-20px)}
+}
+.firefly{
+  position:fixed;
+  width:3px;height:3px;
+  border-radius:50%;
+  background:var(--green-bright);
+  box-shadow:0 0 6px var(--green-bright);
+  pointer-events:none;
+  z-index:0;
+  animation:firefly 4s ease-in-out infinite;
+}
+
+/* Header */
+header{
+  width:100%;
+  max-width:500px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 16px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+  z-index:2;
+}
+
+.logo{
+  font-family:var(--font-display);
+  font-size:2rem;
+  letter-spacing:2px;
+  background:linear-gradient(135deg,var(--green-bright),#a0ff60,var(--green));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+  filter:drop-shadow(0 0 8px rgba(102,255,102,.3));
+  user-select:none;
+}
+
+.logo-frog{
+  display:inline-block;
+  font-size:1.4rem;
+  margin-right:4px;
+  -webkit-text-fill-color:initial;
+  animation:logo-bounce 2s ease-in-out infinite;
+}
+
+@keyframes logo-bounce{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-3px)}
+}
+
+.header-buttons{
+  display:flex;
+  gap:8px;
+}
+
+.icon-btn{
+  background:none;
+  border:1px solid var(--border);
+  color:var(--text-dim);
+  width:36px;height:36px;
+  border-radius:8px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;
+  transition:all .2s;
+}
+.icon-btn:hover{
+  background:var(--surface);
+  color:var(--text);
+  border-color:var(--green);
+}
+
+/* Hard mode toggle */
+.hard-mode-wrapper{
+  display:flex;align-items:center;gap:6px;
+  font-size:.7rem;
+  color:var(--text-dim);
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+.hard-toggle{
+  width:36px;height:20px;
+  border-radius:10px;
+  background:var(--gray-tile);
+  border:none;
+  cursor:pointer;
+  position:relative;
+  transition:background .3s;
+}
+.hard-toggle.on{background:var(--green)}
+.hard-toggle::after{
+  content:'';
+  position:absolute;
+  top:3px;left:3px;
+  width:14px;height:14px;
+  border-radius:50%;
+  background:var(--text);
+  transition:transform .3s;
+}
+.hard-toggle.on::after{transform:translateX(16px)}
+
+/* Main game area */
+main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  max-width:500px;
+  padding:8px 16px;
+  position:relative;
+  z-index:2;
+  gap:6px;
+  min-height:0;
+}
+
+/* Hint area */
+.hint-area{
+  text-align:center;
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 16px;
+  font-size:.85rem;
+  color:var(--text-bright);
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  max-width:380px;
+  width:100%;
+  line-height:1.4;
+  animation:hint-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes hint-glow{
+  0%{box-shadow:0 0 5px var(--glow)}
+  100%{box-shadow:0 0 20px var(--glow),0 0 40px rgba(76,175,80,.05)}
+}
+
+.hint-area.desperate{
+  animation:shake .5s ease-in-out;
+  border-color:var(--green);
+  color:#fff;
+  font-weight:700;
+}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}
+
+/* Game grid */
+.grid{
+  display:grid;
+  grid-template-rows:repeat(6,1fr);
+  gap:5px;
+  width:fit-content;
+}
+
+.row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:5px;
+}
+
+.tile{
+  width:58px;height:58px;
+  border:2px solid var(--border);
+  border-radius:6px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:var(--font-body);
+  font-size:1.8rem;
+  font-weight:700;
+  text-transform:uppercase;
+  color:var(--text);
+  background:var(--bg2);
+  transition:border-color .15s, transform .1s;
+  user-select:none;
+}
+
+.tile.filled{
+  border-color:var(--text-dim);
+  animation:pop .1s ease;
+}
+
+.tile.current-row{
+  border-color:var(--text-dim);
+}
+
+@keyframes pop{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.08)}
+  100%{transform:scale(1)}
+}
+
+.tile.reveal{
+  animation:flip .5s ease forwards;
+}
+
+@keyframes flip{
+  0%{transform:rotateX(0);background:var(--bg2)}
+  45%{transform:rotateX(90deg);background:var(--bg2)}
+  55%{transform:rotateX(90deg)}
+  100%{transform:rotateX(0)}
+}
+
+.tile.correct{background:var(--green-tile);border-color:var(--green-tile)}
+.tile.present{background:var(--yellow-tile);border-color:var(--yellow-tile)}
+.tile.absent{background:var(--gray-tile);border-color:var(--gray-tile)}
+
+/* Bounce for winning row */
+.tile.win-bounce{
+  animation:win-bounce .6s ease forwards;
+}
+
+@keyframes win-bounce{
+  0%{transform:translateY(0)}
+  30%{transform:translateY(-20px)}
+  50%{transform:translateY(0)}
+  70%{transform:translateY(-8px)}
+  100%{transform:translateY(0)}
+}
+
+/* Message toast */
+.toast-container{
+  position:fixed;
+  top:80px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:100;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+}
+
+.toast{
+  background:var(--text);
+  color:var(--bg);
+  padding:10px 20px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:.9rem;
+  animation:toast-in .3s ease;
+  white-space:nowrap;
+}
+
+@keyframes toast-in{
+  0%{opacity:0;transform:translateY(-10px)}
+  100%{opacity:1;transform:translateY(0)}
+}
+
+/* Keyboard */
+.keyboard{
+  width:100%;
+  max-width:500px;
+  padding:0 4px 8px;
+  position:relative;
+  z-index:2;
+}
+
+.kb-row{
+  display:flex;
+  justify-content:center;
+  gap:4px;
+  margin-bottom:4px;
+}
+
+.key{
+  height:50px;
+  min-width:28px;
+  padding:0 8px;
+  border:none;
+  border-radius:6px;
+  background:var(--surface2);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:.85rem;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-transform:uppercase;
+  transition:all .15s;
+  user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  flex:1;
+  max-width:44px;
+}
+
+.key.wide{
+  min-width:56px;
+  max-width:70px;
+  font-size:.7rem;
+  letter-spacing:.5px;
+}
+
+.key:active{
+  transform:scale(.95);
+}
+
+.key.correct{background:var(--green-tile);color:#fff}
+.key.present{background:var(--yellow-tile);color:#fff}
+.key.absent{background:#2a2a2a;color:#666}
+
+/* Confetti / celebration */
+.celebration{
+  position:fixed;
+  inset:0;
+  z-index:50;
+  pointer-events:none;
+  overflow:hidden;
+}
+
+.confetti-piece{
+  position:absolute;
+  font-size:1.5rem;
+  animation:confetti-fall linear forwards;
+  pointer-events:none;
+}
+
+@keyframes confetti-fall{
+  0%{transform:translateY(-20px) rotate(0deg) scale(1);opacity:1}
+  80%{opacity:1}
+  100%{transform:translateY(100vh) rotate(720deg) scale(.5);opacity:0}
+}
+
+.win-message{
+  position:fixed;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  z-index:51;
+  text-align:center;
+  animation:win-pop .5s cubic-bezier(.175,.885,.32,1.275);
+  pointer-events:none;
+}
+
+.win-message h2{
+  font-family:var(--font-display);
+  font-size:3rem;
+  color:var(--green-bright);
+  text-shadow:0 0 30px rgba(102,255,102,.5);
+  margin-bottom:8px;
+}
+
+.win-message p{
+  font-size:1.1rem;
+  color:var(--text);
+  opacity:.9;
+}
+
+@keyframes win-pop{
+  0%{transform:translate(-50%,-50%) scale(0);opacity:0}
+  100%{transform:translate(-50%,-50%) scale(1);opacity:1}
+}
+
+/* Modal */
+.modal-overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);
+  z-index:200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  animation:fade-in .2s ease;
+}
+
+@keyframes fade-in{0%{opacity:0}100%{opacity:1}}
+
+.modal{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:28px 24px;
+  max-width:400px;
+  width:100%;
+  max-height:85vh;
+  overflow-y:auto;
+  position:relative;
+  animation:modal-pop .3s cubic-bezier(.175,.885,.32,1.275);
+}
+
+@keyframes modal-pop{0%{transform:scale(.9);opacity:0}100%{transform:scale(1);opacity:1}}
+
+.modal-close{
+  position:absolute;
+  top:12px;right:12px;
+  background:none;border:none;
+  color:var(--text-dim);
+  font-size:1.3rem;
+  cursor:pointer;
+  width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:6px;
+}
+.modal-close:hover{background:var(--surface2);color:var(--text)}
+
+.modal h2{
+  font-family:var(--font-display);
+  font-size:1.6rem;
+  color:var(--green-bright);
+  margin-bottom:16px;
+  text-align:center;
+}
+
+/* Stats */
+.stats-row{
+  display:flex;
+  justify-content:center;
+  gap:16px;
+  margin-bottom:20px;
+}
+
+.stat-box{
+  text-align:center;
+}
+
+.stat-num{
+  font-size:2rem;
+  font-weight:700;
+  color:var(--text);
+  line-height:1;
+}
+
+.stat-label{
+  font-size:.65rem;
+  color:var(--text-dim);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  margin-top:4px;
+}
+
+/* Guess distribution */
+.dist-title{
+  font-size:.75rem;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--text-dim);
+  margin-bottom:10px;
+  text-align:center;
+}
+
+.dist-row{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+}
+
+.dist-num{
+  font-size:.8rem;
+  color:var(--text-dim);
+  width:12px;
+  text-align:right;
+}
+
+.dist-bar{
+  height:22px;
+  background:var(--gray-tile);
+  border-radius:3px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  padding-right:6px;
+  font-size:.75rem;
+  font-weight:700;
+  color:#fff;
+  min-width:24px;
+  transition:width .5s ease;
+}
+
+.dist-bar.highlight{
+  background:var(--green-tile);
+}
+
+/* Share & countdown */
+.share-section{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-top:20px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+}
+
+.countdown{text-align:center}
+.countdown-label{
+  font-size:.65rem;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--text-dim);
+  margin-bottom:4px;
+}
+.countdown-time{
+  font-size:1.8rem;
+  font-weight:700;
+  font-variant-numeric:tabular-nums;
+  color:var(--text);
+}
+
+.share-btn{
+  background:var(--green-tile);
+  color:#fff;
+  border:none;
+  padding:12px 28px;
+  border-radius:24px;
+  font-family:var(--font-body);
+  font-size:.9rem;
+  font-weight:700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  transition:all .2s;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+.share-btn:hover{background:var(--green);transform:scale(1.03)}
+.share-btn:active{transform:scale(.97)}
+
+/* About modal */
+.about-text{
+  color:var(--text-dim);
+  line-height:1.7;
+  font-size:.9rem;
+  text-align:center;
+}
+.about-text em{
+  color:var(--green-bright);
+  font-style:normal;
+}
+
+/* How?! screen */
+.how-screen{
+  text-align:center;
+  padding:40px 20px;
+}
+.how-screen .big-frog{
+  font-size:4rem;
+  margin-bottom:16px;
+}
+.how-screen h2{
+  font-size:2.5rem;
+  color:#ff6b6b;
+  margin-bottom:12px;
+}
+.how-screen p{
+  color:var(--text-dim);
+  font-size:1rem;
+}
+
+/* Responsive */
+@media(max-width:400px){
+  .tile{width:50px;height:50px;font-size:1.5rem}
+  .key{height:46px;font-size:.75rem}
+  .logo{font-size:1.6rem}
+  .hint-area{font-size:.78rem;padding:5px 12px;min-height:42px}
+}
+
+@media(min-height:750px){
+  .tile{width:62px;height:62px}
+}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="lily-pad"></div>
+<div class="lily-pad"></div>
+<div class="lily-pad"></div>
+
+<div class="firefly" style="top:15%;left:10%;animation-delay:0s"></div>
+<div class="firefly" style="top:30%;left:85%;animation-delay:1.2s"></div>
+<div class="firefly" style="top:60%;left:15%;animation-delay:2.5s"></div>
+<div class="firefly" style="top:45%;left:75%;animation-delay:0.8s"></div>
+<div class="firefly" style="top:75%;left:50%;animation-delay:3.1s"></div>
+
+<header>
+  <div class="hard-mode-wrapper">
+    <button class="hard-toggle" id="hardToggle" title="Hard Mode (does absolutely nothing)"></button>
+    <span>Hard</span>
+  </div>
+  <div class="logo"><span class="logo-frog">🐸</span>FROGGLE</div>
+  <div class="header-buttons">
+    <button class="icon-btn" id="btnAbout" title="About">?</button>
+    <button class="icon-btn" id="btnStats" title="Stats">📊</button>
+  </div>
+</header>
+
+<main>
+  <div class="hint-area" id="hintArea"></div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="keyboard" id="keyboard">
+  <div class="kb-row">
+    <button class="key" data-key="q">q</button>
+    <button class="key" data-key="w">w</button>
+    <button class="key" data-key="e">e</button>
+    <button class="key" data-key="r">r</button>
+    <button class="key" data-key="t">t</button>
+    <button class="key" data-key="y">y</button>
+    <button class="key" data-key="u">u</button>
+    <button class="key" data-key="i">i</button>
+    <button class="key" data-key="o">o</button>
+    <button class="key" data-key="p">p</button>
+  </div>
+  <div class="kb-row">
+    <button class="key" data-key="a">a</button>
+    <button class="key" data-key="s">s</button>
+    <button class="key" data-key="d">d</button>
+    <button class="key" data-key="f">f</button>
+    <button class="key" data-key="g">g</button>
+    <button class="key" data-key="h">h</button>
+    <button class="key" data-key="j">j</button>
+    <button class="key" data-key="k">k</button>
+    <button class="key" data-key="l">l</button>
+  </div>
+  <div class="kb-row">
+    <button class="key wide" data-key="Enter">Enter</button>
+    <button class="key" data-key="z">z</button>
+    <button class="key" data-key="x">x</button>
+    <button class="key" data-key="c">c</button>
+    <button class="key" data-key="v">v</button>
+    <button class="key" data-key="b">b</button>
+    <button class="key" data-key="n">n</button>
+    <button class="key" data-key="m">m</button>
+    <button class="key wide" data-key="Backspace">⌫</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+<div class="celebration" id="celebration"></div>
+
+<script>
+// ─── Word list for validation ───
+const VALID_WORDS = new Set([
+  'able','acid','aged','also','arch','area','army','away','baby','back','bait','bald','ball','band',
+  'bank','bare','bark','barn','base','bath','bead','beam','bean','bear','beat','beef','been','beer',
+  'bell','belt','bend','bent','best','bike','bill','bind','bird','bite','blah','bled','blew','blob',
+  'blog','blot','blow','blue','blur','boar','boat','body','bold','bolt','bomb','bond','bone','book',
+  'boom','boot','bore','born','boss','both','bout','bowl','bulk','bull','bump','burn','bury','bush',
+  'busy','buzz','cafe','cage','cake','calf','call','calm','came','camp','cape','card','care','cart',
+  'case','cash','cast','cave','cell','chat','chef','chip','chop','cite','city','clad','clam','clap',
+  'clay','clip','clock','clone','club','clue','coal','coat','cock','code','coil','coin','cold','cole',
+  'colt','come','cook','cool','cope','copy','cord','core','cork','corn','cost','coup','cowl','crab',
+  'crew','crop','crow','cure','curl','cute','daft','dame','damn','damp','dare','dark','dart','dash',
+  'data','date','dawn','dead','deaf','deal','dean','dear','debt','deck','deed','deem','deep','deer',
+  'demo','dent','deny','desk','dial','dice','diet','dirt','disc','dish','dock','does','doll','dome',
+  'done','doom','door','dose','down','drag','draw','drew','drip','drop','drug','drum','dual','duck',
+  'duel','dull','dumb','dump','dune','dunk','dust','duty','each','earl','earn','ease','east','easy',
+  'edge','edit','else','emit','epic','euro','even','ever','evil','exam','exec','exit','expo','eyed',
+  'face','fact','fade','fail','fair','fake','fall','fame','fang','fare','farm','fast','fate','fawn',
+  'fear','feat','feed','feel','feet','fell','felt','file','fill','film','find','fine','fire','firm',
+  'fish','fist','flab','flag','flame','flap','flat','flaw','flea','fled','flew','flex','flip','flit',
+  'flog','flop','flow','foam','foal','foci','foil','fold','folk','fond','font','food','fool','foot',
+  'ford','fore','fork','form','fort','foul','four','fowl','free','fret','frog','from','fuel','full',
+  'fund','funk','fury','fuse','fuss','fuzz','gait','gale','gall','game','gang','gape','garb','gash',
+  'gasp','gate','gave','gaze','gear','gene','gift','gilt','girl','gist','give','glad','glee','glen',
+  'glib','glob','gloom','glow','glue','glum','gnat','gnaw','goad','goat','gold','golf','gone','good',
+  'gore','grab','gram','gray','grew','grid','grim','grin','grip','grit','grow','gulf','gull','gulp',
+  'guru','gust','guts','hack','hail','hair','hale','half','hall','halt','hand','hang','hare','harm',
+  'harp','hash','hate','haul','have','haze','hazy','head','heal','heap','hear','heat','heed','heel',
+  'held','hell','helm','help','herb','herd','here','hero','hide','high','hike','hill','hilt','hind',
+  'hint','hire','hold','hole','holy','home','hood','hook','hope','horn','hose','host','hour','huge',
+  'hull','hump','hung','hunt','hurl','hurt','hush','hymn','icon','idea','idle','inch','info','into',
+  'iron','isle','item','jack','jade','jail','jazz','jean','jerk','jest','jobs','jock','join','joke',
+  'jolt','jump','june','jury','just','keen','keep','kelp','kept','kick','kill','kind','king','kiss',
+  'kite','knee','knew','knit','knob','knot','know','lace','lack','laid','lake','lame','lamp','land',
+  'lane','lard','lark','lash','lass','last','late','lawn','lead','leaf','leak','lean','leap','left',
+  'lend','lens','lent','less','lied','lieu','life','lift','like','limb','lime','limp','line','link',
+  'lion','list','live','load','loaf','loan','lock','loft','logo','long','look','loop','lord','lore',
+  'lose','loss','lost','lots','loud','love','luck','lull','lump','lung','lure','lurk','lush','lust',
+  'made','maid','mail','main','make','male','mall','malt','mane','many','mare','mark','mars','mash',
+  'mask','mass','mast','mate','maze','meal','mean','meat','meet','meld','melt','memo','mend','menu',
+  'mere','mesh','mess','mild','mile','milk','mill','mime','mind','mine','mint','miss','mist','moan',
+  'moat','mock','mode','mold','mole','mood','moon','moor','more','moss','most','moth','move','much',
+  'muck','mule','mull','muon','muse','mush','must','mute','myth','nail','name','navy','near','neat',
+  'neck','need','nest','next','nice','nick','nine','node','none','norm','nose','note','noun','null',
+  'numb','oath','obey','odds','okay','omen','omit','once','only','onto','ooze','open','oral','orca',
+  'oven','over','owed','pace','pack','pact','page','paid','pail','pain','pair','pale','palm','pane',
+  'pant','park','part','pass','past','path','pave','peak','pear','peat','peck','peel','peer','pelt',
+  'perk','pest','pick','pier','pile','pill','pine','pink','pipe','plan','play','plea','plod','plot',
+  'plow','plug','plum','plus','pock','poem','poet','poke','pole','poll','polo','pond','pony','pool',
+  'poor','pope','pore','pork','port','pose','post','pour','pray','prep','prey','prop','prow','pull',
+  'pulp','pump','punk','pure','push','quit','quiz','race','rack','raft','rage','raid','rail','rain',
+  'rake','ramp','rang','rank','rare','rash','rate','rave','read','real','reap','rear','reed','reef',
+  'reel','rein','rely','rend','rent','rest','rice','rich','ride','rift','rile','rill','rind','ring',
+  'riot','ripe','rise','risk','road','roam','roar','robe','rock','rode','role','roll','roof','room',
+  'root','rope','rose','rote','rout','ruin','rule','rump','rung','rush','rust','ruth','sack','safe',
+  'saga','sage','said','sail','sake','sale','salt','same','sand','sane','sang','sank','save','scan',
+  'seal','seam','seat','sect','seed','seek','seem','seen','self','sell','send','sent','sept','sett',
+  'shed','shin','ship','shoe','shoo','shop','shot','show','shut','sick','side','sift','sigh','sign',
+  'silk','sill','silt','sing','sink','site','size','skid','skim','skin','skip','slab','slag','slam',
+  'slap','slat','slaw','sled','slew','slid','slim','slip','slit','slot','slow','slug','slum','smog',
+  'snap','snip','snow','snub','snug','soak','soap','soar','sock','soda','sofa','soft','soil','sold',
+  'sole','some','song','soon','soot','sore','sort','soul','sour','span','spar','spec','sped','spin',
+  'spit','spot','spur','stab','stag','star','stay','stem','step','stew','stir','stop','stub','stud',
+  'stun','such','suck','suit','sulk','sung','sunk','sure','surf','swan','swap','swim','tack','tact',
+  'tail','take','tale','talk','tall','tame','tang','tank','tape','tarn','tart','task','taxi','teak',
+  'teal','team','tear','tell','temp','tend','tent','term','test','text','than','that','them','then',
+  'they','thin','this','thud','thug','thus','tick','tide','tidy','tied','tier','tile','till','tilt',
+  'time','tint','tiny','tire','toad','toes','toil','told','toll','tomb','tome','tone','took','tool',
+  'tops','tore','torn','tort','toss','tour','town','trap','tray','tree','trek','trim','trio','trip',
+  'trod','trot','true','tuba','tube','tuck','tuft','tuna','tune','turf','turn','tusk','tutu','twin',
+  'type','ugly','undo','unit','unto','upon','urge','used','user','vain','vale','vane','vary','vase',
+  'vast','veil','vein','vent','verb','very','vest','veto','vial','vice','view','vine','visa','void',
+  'volt','vote','wade','wage','wail','wait','wake','walk','wall','wand','want','ward','warm','warn',
+  'warp','wart','wary','wash','wasp','wave','wavy','waxy','weak','wean','wear','weed','week','well',
+  'welt','went','wept','were','west','what','when','whim','whip','whom','wick','wide','wife','wild',
+  'will','wilt','wily','wimp','wind','wine','wing','wink','wipe','wire','wise','wish','wisp','with',
+  'wits','woke','wolf','womb','wont','wood','wool','word','wore','work','worm','worn','wove','wrap',
+  'wren','yank','yard','yarn','yeah','year','yell','yoga','yoke','your','zeal','zero','zinc','zone','zoom',
+]);
+
+const TARGET = 'frog';
+const DAY_ZERO = new Date('2024-01-01').getTime();
+
+// ─── Hints that escalate in desperation ───
+const HINTS_BY_ROW = [
+  `🐸 Hint: Today's word rhymes with "log" and starts with "FR"...`,
+  `🐸 Psst... it's a small green animal. Four letters. Starts with F. Ends with G.`,
+  `🐸 OK here's a BIG clue: F _ O G.  You got this!`,
+  `🐸 THE WORD IS "FROG". JUST TYPE F-R-O-G. PLEASE.`,
+  `🐸 I'M LITERALLY BEGGING YOU. IT'S FROG. F. R. O. G. THE AMPHIBIAN.`,
+  `🐸 ...are you doing this on purpose? Type FROG. That's it. FROG.`,
+];
+
+const WIN_MESSAGES = [
+  "Incredible! No one has EVER guessed FROG before! 🐸",
+  "Wow, a true wordsmith! Who could have predicted... FROG?!",
+  "You absolute genius. The answer was FROG and you FOUND it.",
+  "Alert the press! Someone solved Froggle! (it was frog)",
+  "Standing ovation! 👏 You guessed FROG! Unprecedented!",
+  "Ribbit! 🐸 That's frog for 'congratulations, you genius'",
+];
+
+const SARCASTIC_WRONG = [
+  "Hmm, not quite! But you're SO close (to typing FROG).",
+  "Interesting guess! Have you considered... a small green amphibian?",
+  "Bold strategy! But what if—hear me out—you tried FROG?",
+  "Ooh, tough break. Maybe try something more... froggy?",
+  "Not it! Fun fact: the answer rhymes with 'blog'. And 'fog'. And 'FROG'.",
+];
+
+// ─── State ───
+let currentRow = 0;
+let currentCol = 0;
+let currentGuess = '';
+let gameOver = false;
+let guesses = [];
+let keyStates = {};
+let todayKey = '';
+
+function getDayNumber() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  return Math.floor((start - DAY_ZERO) / 86400000);
+}
+
+function getTodayKey() {
+  return 'froggle-' + getDayNumber();
+}
+
+// ─── Grid setup ───
+function buildGrid() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  for (let r = 0; r < 6; r++) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.id = 'row-' + r;
+    for (let c = 0; c < 4; c++) {
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.id = `tile-${r}-${c}`;
+      row.appendChild(tile);
+    }
+    grid.appendChild(row);
+  }
+}
+
+// ─── Hint display ───
+function updateHint() {
+  const el = document.getElementById('hintArea');
+  if (gameOver) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'flex';
+  const hint = HINTS_BY_ROW[Math.min(currentRow, HINTS_BY_ROW.length - 1)];
+  el.textContent = hint;
+  if (currentRow >= 3) {
+    el.classList.add('desperate');
+    setTimeout(() => el.classList.remove('desperate'), 600);
+  }
+}
+
+// ─── Input ───
+function addLetter(letter) {
+  if (gameOver || currentCol >= 4) return;
+  const tile = document.getElementById(`tile-${currentRow}-${currentCol}`);
+  tile.textContent = letter;
+  tile.classList.add('filled');
+  currentGuess += letter;
+  currentCol++;
+}
+
+function removeLetter() {
+  if (gameOver || currentCol <= 0) return;
+  currentCol--;
+  const tile = document.getElementById(`tile-${currentRow}-${currentCol}`);
+  tile.textContent = '';
+  tile.classList.remove('filled');
+  currentGuess = currentGuess.slice(0, -1);
+}
+
+function submitGuess() {
+  if (gameOver) return;
+  if (currentGuess.length < 4) {
+    showToast('Not enough letters');
+    shakeRow(currentRow);
+    return;
+  }
+  if (!VALID_WORDS.has(currentGuess)) {
+    showToast('Not in word list');
+    shakeRow(currentRow);
+    return;
+  }
+
+  const guess = currentGuess;
+  guesses.push(guess);
+  revealRow(currentRow, guess);
+}
+
+function revealRow(rowIdx, guess) {
+  const tiles = [];
+  const result = [];
+
+  // Calculate colors
+  const targetArr = TARGET.split('');
+  const guessArr = guess.split('');
+  const colors = ['absent', 'absent', 'absent', 'absent'];
+  const used = [false, false, false, false];
+
+  // Greens first
+  for (let i = 0; i < 4; i++) {
+    if (guessArr[i] === targetArr[i]) {
+      colors[i] = 'correct';
+      used[i] = true;
+    }
+  }
+  // Yellows
+  for (let i = 0; i < 4; i++) {
+    if (colors[i] === 'correct') continue;
+    for (let j = 0; j < 4; j++) {
+      if (!used[j] && guessArr[i] === targetArr[j]) {
+        colors[i] = 'present';
+        used[j] = true;
+        break;
+      }
+    }
+  }
+
+  // Animate tiles
+  for (let i = 0; i < 4; i++) {
+    const tile = document.getElementById(`tile-${rowIdx}-${i}`);
+    setTimeout(() => {
+      tile.classList.add('reveal');
+      setTimeout(() => {
+        tile.classList.add(colors[i]);
+      }, 250);
+    }, i * 300);
+  }
+
+  // Update keyboard colors
+  setTimeout(() => {
+    for (let i = 0; i < 4; i++) {
+      const letter = guessArr[i];
+      const prev = keyStates[letter];
+      if (colors[i] === 'correct') {
+        keyStates[letter] = 'correct';
+      } else if (colors[i] === 'present' && prev !== 'correct') {
+        keyStates[letter] = 'present';
+      } else if (!prev) {
+        keyStates[letter] = 'absent';
+      }
+    }
+    updateKeyboard();
+  }, 4 * 300 + 300);
+
+  // Check win/loss after animation
+  const totalDelay = 4 * 300 + 600;
+  setTimeout(() => {
+    if (guess === TARGET) {
+      gameOver = true;
+      // Win bounce
+      for (let i = 0; i < 4; i++) {
+        const tile = document.getElementById(`tile-${rowIdx}-${i}`);
+        setTimeout(() => tile.classList.add('win-bounce'), i * 100);
+      }
+      setTimeout(() => {
+        celebrate();
+        const msg = WIN_MESSAGES[Math.floor(Math.random() * WIN_MESSAGES.length)];
+        showToast(msg, 4000);
+        saveGame(true);
+        setTimeout(() => showStats(), 2500);
+      }, 500);
+    } else {
+      currentRow++;
+      currentCol = 0;
+      currentGuess = '';
+      if (currentRow >= 6) {
+        gameOver = true;
+        saveGame(false);
+        setTimeout(() => showHowScreen(), 500);
+      } else {
+        updateHint();
+        const msg = SARCASTIC_WRONG[Math.min(currentRow - 1, SARCASTIC_WRONG.length - 1)];
+        showToast(msg, 3000);
+      }
+    }
+  }, totalDelay);
+}
+
+function shakeRow(rowIdx) {
+  const row = document.getElementById('row-' + rowIdx);
+  row.style.animation = 'shake .5s ease-in-out';
+  setTimeout(() => row.style.animation = '', 500);
+}
+
+function updateKeyboard() {
+  document.querySelectorAll('.key[data-key]').forEach(btn => {
+    const k = btn.dataset.key.toLowerCase();
+    if (keyStates[k]) {
+      btn.className = 'key ' + (k === 'enter' || k === 'backspace' ? 'wide ' : '') + keyStates[k];
+    }
+  });
+}
+
+// ─── Toast ───
+function showToast(msg, duration = 1500) {
+  const container = document.getElementById('toasts');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity .3s';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
+// ─── Celebration ───
+function celebrate() {
+  const el = document.getElementById('celebration');
+  const frogs = ['🐸', '🐸', '💚', '🟩', '🐸', '✨', '🐸'];
+  const ribbits = ['RIBBIT!', 'CROAK!', '🐸', 'RIBBIT!'];
+
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.textContent = frogs[Math.floor(Math.random() * frogs.length)];
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.animationDuration = (2 + Math.random() * 2) + 's';
+    piece.style.animationDelay = Math.random() * 1.5 + 's';
+    piece.style.fontSize = (1 + Math.random() * 1.5) + 'rem';
+    el.appendChild(piece);
+  }
+
+  // Win message
+  const winMsg = document.createElement('div');
+  winMsg.className = 'win-message';
+  winMsg.innerHTML = `<h2>RIBBIT! 🐸</h2><p>You cracked the code. It was FROG.</p>`;
+  el.appendChild(winMsg);
+
+  setTimeout(() => {
+    winMsg.style.opacity = '0';
+    winMsg.style.transition = 'opacity .5s';
+    setTimeout(() => winMsg.remove(), 500);
+  }, 2500);
+
+  setTimeout(() => {
+    el.innerHTML = '';
+  }, 5000);
+}
+
+// ─── Save/Load ───
+function getStats() {
+  const raw = localStorage.getItem('froggle-stats');
+  if (raw) return JSON.parse(raw);
+  return { played: 0, won: 0, streak: 0, maxStreak: 0, dist: {1:0,2:0,3:0,4:0,5:0,6:0} };
+}
+
+function saveGame(won) {
+  const stats = getStats();
+  stats.played++;
+  if (won) {
+    stats.won++;
+    stats.streak++;
+    if (stats.streak > stats.maxStreak) stats.maxStreak = stats.streak;
+    stats.dist[guesses.length] = (stats.dist[guesses.length] || 0) + 1;
+  } else {
+    stats.streak = 0;
+  }
+  localStorage.setItem('froggle-stats', JSON.stringify(stats));
+
+  // Save today's game
+  localStorage.setItem(todayKey, JSON.stringify({ guesses, won }));
+}
+
+function loadGame() {
+  todayKey = getTodayKey();
+  const raw = localStorage.getItem(todayKey);
+  if (!raw) {
+    updateHint();
+    return;
+  }
+  const data = JSON.parse(raw);
+  gameOver = true;
+  guesses = data.guesses;
+
+  // Restore grid instantly
+  for (let r = 0; r < guesses.length; r++) {
+    const guess = guesses[r];
+    const targetArr = TARGET.split('');
+    const guessArr = guess.split('');
+    const colors = ['absent', 'absent', 'absent', 'absent'];
+    const used = [false, false, false, false];
+    for (let i = 0; i < 4; i++) {
+      if (guessArr[i] === targetArr[i]) { colors[i] = 'correct'; used[i] = true; }
+    }
+    for (let i = 0; i < 4; i++) {
+      if (colors[i] === 'correct') continue;
+      for (let j = 0; j < 4; j++) {
+        if (!used[j] && guessArr[i] === targetArr[j]) { colors[i] = 'present'; used[j] = true; break; }
+      }
+    }
+    for (let i = 0; i < 4; i++) {
+      const tile = document.getElementById(`tile-${r}-${i}`);
+      tile.textContent = guessArr[i];
+      tile.classList.add(colors[i]);
+      const letter = guessArr[i];
+      if (colors[i] === 'correct') keyStates[letter] = 'correct';
+      else if (colors[i] === 'present' && keyStates[letter] !== 'correct') keyStates[letter] = 'present';
+      else if (!keyStates[letter]) keyStates[letter] = 'absent';
+    }
+  }
+  updateKeyboard();
+  currentRow = guesses.length;
+  document.getElementById('hintArea').style.display = 'none';
+}
+
+// ─── Stats modal ───
+function showStats() {
+  const stats = getStats();
+  const winPct = stats.played ? Math.round(stats.won / stats.played * 100) : 0;
+  const maxDist = Math.max(...Object.values(stats.dist), 1);
+  const lastGuesses = guesses.length;
+
+  let distHtml = '';
+  for (let i = 1; i <= 6; i++) {
+    const count = stats.dist[i] || 0;
+    const width = Math.max(count / maxDist * 100, 8);
+    const hl = (gameOver && guesses[guesses.length - 1] === TARGET && lastGuesses === i) ? ' highlight' : '';
+    distHtml += `<div class="dist-row">
+      <div class="dist-num">${i}</div>
+      <div class="dist-bar${hl}" style="width:${width}%">${count}</div>
+    </div>`;
+  }
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.id = 'statsModal';
+  modal.innerHTML = `<div class="modal">
+    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    <h2>Statistics 🐸</h2>
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num">${stats.played}</div><div class="stat-label">Played</div></div>
+      <div class="stat-box"><div class="stat-num">${winPct}</div><div class="stat-label">Win %</div></div>
+      <div class="stat-box"><div class="stat-num">${stats.streak}</div><div class="stat-label">Streak</div></div>
+      <div class="stat-box"><div class="stat-num">${stats.maxStreak}</div><div class="stat-label">Max Streak</div></div>
+    </div>
+    <div class="dist-title">Guess Distribution</div>
+    ${distHtml}
+    <div class="share-section">
+      <div class="countdown">
+        <div class="countdown-label">Next Froggle</div>
+        <div class="countdown-time" id="countdownTimer">--:--:--</div>
+      </div>
+      ${gameOver ? `<button class="share-btn" onclick="shareResult()">Share 🐸</button>` : ''}
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  startCountdown();
+}
+
+function startCountdown() {
+  function update() {
+    const el = document.getElementById('countdownTimer');
+    if (!el) return;
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const diff = tomorrow - now;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    requestAnimationFrame(update);
+  }
+  update();
+}
+
+function shareResult() {
+  const dayNum = getDayNumber();
+  const won = guesses[guesses.length - 1] === TARGET;
+  const numGuesses = won ? guesses.length : 'X';
+
+  let grid = '';
+  for (const guess of guesses) {
+    const targetArr = TARGET.split('');
+    const guessArr = guess.split('');
+    const colors = ['⬛','⬛','⬛','⬛'];
+    const used = [false,false,false,false];
+    for (let i = 0; i < 4; i++) {
+      if (guessArr[i] === targetArr[i]) { colors[i] = '🟩'; used[i] = true; }
+    }
+    for (let i = 0; i < 4; i++) {
+      if (colors[i] === '🟩') continue;
+      for (let j = 0; j < 4; j++) {
+        if (!used[j] && guessArr[i] === targetArr[j]) { colors[i] = '🟨'; used[j] = true; break; }
+      }
+    }
+    grid += colors.join('') + '\n';
+  }
+
+  const text = `Froggle 🐸 Day ${dayNum} — ${numGuesses}/6\n\n${grid}\n...it was FROG again`;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard! 🐸'));
+  } else {
+    showToast('Could not copy');
+  }
+}
+
+// ─── How?! screen ───
+function showHowScreen() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `<div class="modal">
+    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    <div class="how-screen">
+      <div class="big-frog">🐸</div>
+      <h2>HOW?!</h2>
+      <p>You used all 6 guesses without typing FROG.<br><br>
+      The word was <strong>FROG</strong>. It's always <strong>FROG</strong>.<br><br>
+      We gave you SO many hints.<br><br>
+      Are you okay?</p>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+// ─── About modal ───
+function showAbout() {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `<div class="modal">
+    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    <h2>About Froggle</h2>
+    <p class="about-text">
+      <em>Froggle</em>: A word game for <em>geniuses</em>.<br><br>
+      New puzzle every day.<br>
+      (It's always frog.)<br><br>
+      You get 6 chances to guess a 4-letter word. We believe in you.<br><br>
+      🐸 Inspired by a deep love of frogs and an even deeper love of extremely easy games.<br><br>
+      <span style="font-size:.75rem;color:var(--text-dim)">Hard Mode does absolutely nothing. You're welcome.</span>
+    </p>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+// ─── Hard Mode toggle ───
+document.getElementById('hardToggle').addEventListener('click', function() {
+  this.classList.toggle('on');
+  if (this.classList.contains('on')) {
+    showToast('Hard Mode activated! (nothing changed)', 2000);
+  } else {
+    showToast('Hard Mode deactivated! (still nothing)', 2000);
+  }
+});
+
+// ─── Event listeners ───
+// On-screen keyboard
+document.getElementById('keyboard').addEventListener('click', e => {
+  const btn = e.target.closest('.key');
+  if (!btn) return;
+  const key = btn.dataset.key;
+  if (key === 'Enter') submitGuess();
+  else if (key === 'Backspace') removeLetter();
+  else addLetter(key);
+});
+
+// Physical keyboard
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (document.querySelector('.modal-overlay')) {
+    if (e.key === 'Escape') document.querySelector('.modal-overlay').remove();
+    return;
+  }
+  if (e.key === 'Enter') submitGuess();
+  else if (e.key === 'Backspace') removeLetter();
+  else if (/^[a-zA-Z]$/.test(e.key)) addLetter(e.key.toLowerCase());
+});
+
+// Header buttons
+document.getElementById('btnStats').addEventListener('click', showStats);
+document.getElementById('btnAbout').addEventListener('click', showAbout);
+
+// ─── Init ───
+buildGrid();
+loadGame();
+</script>
+</body>
+</html>
